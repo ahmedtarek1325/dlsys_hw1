@@ -1,4 +1,6 @@
 """Core data structures."""
+from cgi import print_directory
+from platform import node
 import needle
 from typing import List, Optional, NamedTuple, Tuple, Union
 from collections import namedtuple
@@ -399,7 +401,26 @@ def compute_gradient_of_variables(output_tensor, out_grad):
     reverse_topo_order = list(reversed(find_topo_sort([output_tensor])))
 
     ### BEGIN YOUR SOLUTION
-    raise NotImplementedError()
+    for i in reverse_topo_order: 
+        if i not in node_to_output_grads_list: continue
+
+        num_of_padjoints= len(node_to_output_grads_list[i])
+        if num_of_padjoints == 0 : continue
+        elif num_of_padjoints == 1 :
+            i.grad =  node_to_output_grads_list[i][0]
+        elif num_of_padjoints > 1: 
+            i.grad,j = node_to_output_grads_list[i][0],1
+            while j < num_of_padjoints: 
+                i.grad +=  node_to_output_grads_list[i][j]
+                j+=1
+
+        if i.op is not None: partial_adj = i.op.gradient_as_tuple(i.grad,i)
+        
+        for index,k in enumerate(i.inputs):
+            if k not in node_to_output_grads_list: 
+                node_to_output_grads_list[k]= [partial_adj[index]]
+            else: 
+                node_to_output_grads_list[k].append(partial_adj[index])
     ### END YOUR SOLUTION
 
 

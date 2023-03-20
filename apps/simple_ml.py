@@ -30,7 +30,18 @@ def parse_mnist(image_filesname, label_filename):
                 for MNIST will contain the values 0-9.
     """
     ### BEGIN YOUR SOLUTION
-    raise NotImplementedError()
+    with gzip.open(label_filename, 'rb') as f:
+        magic,size= struct.unpack(">II",f.read(8))
+        y = np.array(list(f.read()),dtype=np.uint8)
+        y = y.reshape((size,)) 
+    with gzip.open(image_filesname,'rb') as f:
+        magic, size = struct.unpack(">II", f.read(8))
+        nrows, ncols = struct.unpack(">II", f.read(8))
+        X = np.frombuffer(f.read(), dtype=np.dtype(np.uint8).newbyteorder('>'))
+        X = X.reshape((size, nrows*ncols))
+        X=X.astype(np.float32)
+        X/=255
+    return X,y
     ### END YOUR SOLUTION
 
 
@@ -51,7 +62,15 @@ def softmax_loss(Z, y_one_hot):
         Average softmax loss over the sample. (ndl.Tensor[np.float32])
     """
     ### BEGIN YOUR SOLUTION
-    raise NotImplementedError()
+    
+    zy= ndl.summation(ndl.multiply(Z,y_one_hot),axes= 1 )
+    zy=zy.reshape((-1,1))
+    zy= ndl.broadcast_to(zy,Z.shape)
+    return ndl.summation(ndl.log(ndl.summation(ndl.exp((Z-zy)),axes= 1)))/Z.shape[0]
+    '''
+    loss = ndl.log(ndl.summation(ndl.exp(Z),axes = 1)) - ndl.summation(Z*y_one_hot,axes = 1)
+    return ndl.summation(loss)/Z.shape[0]
+    '''
     ### END YOUR SOLUTION
 
 
@@ -80,7 +99,31 @@ def nn_epoch(X, y, W1, W2, lr = 0.1, batch=100):
     """
 
     ### BEGIN YOUR SOLUTION
-    raise NotImplementedError()
+    i,end = 0, X.shape[0]
+    while i < end: 
+        index = i+batch if (i+batch) <= end else end 
+
+        l1_output=  ndl.Tensor(X[i:index]) @ W1
+        Z1 = ndl.relu(l1_output)
+        outputs = Z1 @ W2 # DIM = m*K
+        
+        y_one_hot= np.zeros(outputs.shape)
+        for inde,val in enumerate(y[i:index]): y_one_hot[inde,val]= 1
+        
+        out = softmax_loss(outputs,ndl.Tensor(y_one_hot))
+        out.backward()
+
+        
+        
+        W1 = W1.numpy() - lr*W1.grad.numpy()
+        W2 = W2.numpy() - lr*W2.grad.numpy()
+
+        W1,W2 = ndl.Tensor(W1),ndl.Tensor(W2)
+        i+=batch
+
+
+
+    return (W1,W2)
     ### END YOUR SOLUTION
 
 

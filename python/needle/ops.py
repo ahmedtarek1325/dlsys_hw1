@@ -220,15 +220,16 @@ class Summation(TensorOp):
         
         # we want to know the shape of the tensor
         # before summmation
-        shape_,axes= node.inputs[0].shape, node.op.axes
+        shape_,axes= list(node.inputs[0].shape), self.axes
 
         if shape_ is None: 
             shape_ = [1 for i in axes]
         elif axes is not None: 
+            if type(axes)==int : axes = [axes]
             shape_= [ v if i not in axes else 1 for i,v in enumerate(shape_) ] 
         else: 
             shape_ = [1 for i in  shape_]
-        out_grad=reshape(out_grad,tuple(shape_))   
+        out_grad=reshape(out_grad,tuple(shape_)) 
         out_grad =  broadcast_to(out_grad,node.inputs[0].shape)
         return out_grad
         ### END YOUR SOLUTION
@@ -276,12 +277,12 @@ def negate(a):
 class Log(TensorOp):
     def compute(self, a):
         ### BEGIN YOUR SOLUTION
-        return array_api.log(a)
+        return array_api.log(a+1e-7)
         ### END YOUR SOLUTION
 
     def gradient(self, out_grad, node):
         ### BEGIN YOUR SOLUTION
-        raise NotImplementedError()
+        return divide(out_grad,node.inputs[0]+1e-7) # 1 here represents the smoothing value
         ### END YOUR SOLUTION
 
 
@@ -292,12 +293,12 @@ def log(a):
 class Exp(TensorOp):
     def compute(self, a):
         ### BEGIN YOUR SOLUTION
-        array_api.exp(a)
+        return array_api.exp(a)
         ### END YOUR SOLUTION
 
     def gradient(self, out_grad, node):
         ### BEGIN YOUR SOLUTION
-        raise NotImplementedError()
+        return  out_grad* node.data
         ### END YOUR SOLUTION
 
 
@@ -308,13 +309,15 @@ def exp(a):
 # TODO
 class ReLU(TensorOp):
     def compute(self, a):
-        ### BEGIN YOUR SOLUTION
-        raise NotImplementedError()
+        ### BEGIN YOUR SOLUTION     
+        a = a * (a>0)
+        return a
         ### END YOUR SOLUTION
 
     def gradient(self, out_grad, node):
         ### BEGIN YOUR SOLUTION
-        raise NotImplementedError()
+        derv= node.realize_cached_data()
+        return Tensor((derv>0)) * out_grad
         ### END YOUR SOLUTION
 
 
